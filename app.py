@@ -1,20 +1,24 @@
+import os
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage, ImageSendMessage
-import re
-import os
+from linebot.models import MessageEvent, TextMessage, TextSendMessage
 
-# ✅【初始化】從環境變數讀取 Token 與 Secret
-line_bot_api = LineBotApi(os.getenv("LINE_TOKEN"))
-handler = WebhookHandler(os.getenv("LINE_SECRET"))
+# 從環境變數讀取 Channel Token 和 Secret
+LINE_TOKEN = os.getenv("LINE_TOKEN")
+LINE_SECRET = os.getenv("LINE_SECRET")
 
-# ✅ Flask 初始化
 app = Flask(__name__)
+line_bot_api = LineBotApi(LINE_TOKEN)
+handler = WebhookHandler(LINE_SECRET)
 
-# ✅ webhook 路由
+@app.route("/")
+def index():
+    return "Line Bot is running!"
+
 @app.route("/callback", methods=['POST'])
 def callback():
+    # 確認 LINE Signature
     signature = request.headers['X-Line-Signature']
     body = request.get_data(as_text=True)
 
@@ -25,11 +29,19 @@ def callback():
 
     return 'OK'
 
-# ✅ 訊息處理
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    user_input = event.message.text.strip().lower()
-    reply = None
+    incoming_text = event.message.text.lower()
+    reply = "您說的是：" + incoming_text
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text=reply)
+    )
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
+
 
     # ✅ 顯示圖片：蛋白質對照圖
     if "蛋白質對照" in user_input:
