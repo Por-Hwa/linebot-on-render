@@ -1,3 +1,4 @@
+import os
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
@@ -6,8 +7,8 @@ import re
 
 # ✅【固定】初始化
 app = Flask(__name__)
-line_bot_api = LineBotApi("E/noszYmOIaeVjPwMRb2o/y/mBkIC/XpCjCdO/E9iat9N1EY5Wb+GP5jIiC2kVnVEWdHAd2MRrGZ6XvZAv1VF+M3zZx8AHPvcULjRXG9zIOBl2BLrSP8hoVCFxDC0ch2eJSmEBZEbyGSOHXlnAb2gAdB04t89/1O/w1cDnyilFU=")
-handler = WebhookHandler("53ec299ef779cde405819c7f6b83f616")
+line_bot_api = LineBotApi(os.getenv("LINE_CHANNEL_ACCESS_TOKEN"))
+handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
 
 # ✅【固定】Webhook 路由
 @app.route("/callback", methods=['POST'])
@@ -56,7 +57,7 @@ def handle_message(event):
         return
 
     # ✅ 顯示圖片：疲勞衰弱介紹
-    if any(k in user_input for k in ["介紹"]):
+    if "介紹" in user_input:
         images = [
             ImageSendMessage(
                 original_content_url='https://i.postimg.cc/kGxX8gyp/Inbody1.png',
@@ -91,7 +92,7 @@ def handle_message(event):
     elif any(k in user_input for k in ["量表", "衰弱疲勞評估", "每日蛋白質紀錄", "問卷"]):
         reply = "需填寫表單：\n1.衰弱疲勞評估量表(一週一次)\n連結：https://forms.gle/NHG9k7qjEiaBwDGF7\n\n2.每日蛋白質紀錄量表\n連結：https://forms.gle/uNtt1y9SYGBYGN9N7"
     else:
-        # ✅ 抓數字（例：65、1.5、200ml）
+        # ✅ 數值分析區
         match = re.search(r"(\d+\.?\d*)", user_input)
         if match:
             number = float(match.group())
@@ -99,7 +100,7 @@ def handle_message(event):
             if re.fullmatch(r"\d+\.?\d*", user_input):
                 if number >= 40:
                     protein_portion = (number * 1.2) / 7
-                    reply = f"您的建議每日蛋白質攝取為 {int(protein_portion)} 份。"
+                    reply = f"建議您的每日蛋白質攝取為 {int(protein_portion)} 份。"
                 else:
                     reply = f"已記錄您今天攝取 {number} 份蛋白質。"
             elif any(k in user_input for k in food_units):
@@ -107,13 +108,13 @@ def handle_message(event):
         else:
             reply = "請輸入體重（公斤）或蛋白質攝取情形，例如：70、喝了300cc豆漿、吃了2份肉等。"
 
-    # ✅【固定】回覆訊息
+    # ✅ 回覆文字訊息
     if reply:
         line_bot_api.reply_message(
             event.reply_token,
             TextSendMessage(text=reply)
         )
 
-# ✅【固定】Flask 啟動應用程式
+# ✅ Flask 啟動應用程式
 if __name__ == "__main__":
     app.run()
